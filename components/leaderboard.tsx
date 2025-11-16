@@ -13,6 +13,16 @@ type ScoreData = {
 type LeaderboardData = {
   username: string;
   score: number;
+  interest: {
+    s1: number;
+    s2: number;
+    total: number;
+  };
+  money: {
+    s1: number;
+    s2: number;
+    total: number;
+  };
 };
 
 type LeaderboardClientProps = {
@@ -25,8 +35,6 @@ export default function LeaderboardClient({
   initialMaggregate,
 }: LeaderboardClientProps) {
   const [date, setDate] = useState("");
-  const [aggregate, setAggregate] = useState(initialAggregate);
-  const [maggregate, setMaggregate] = useState(initialMaggregate);
   const [leaderboard, setLeaderboard] = useState<LeaderboardData[]>([]);
 
   useEffect(() => {
@@ -40,14 +48,21 @@ export default function LeaderboardClient({
         )
       : initialMaggregate;
 
-    setAggregate(filteredAggregate);
-    setMaggregate(filteredMaggregate);
-
     const combinedLeaderboard = filteredAggregate.map((d) => {
       const m = filteredMaggregate.find((m) => m.username === d.username);
       return {
         username: d.username,
         score: d.score + (m?.score || 0),
+        interest: {
+          s1: d.s1,
+          s2: d.s2,
+          total: d.s1 + d.s2,
+        },
+        money: {
+          s1: m?.s1 || 0,
+          s2: m?.s2 || 0,
+          total: (m?.s1 || 0) + (m?.s2 || 0),
+        },
       };
     });
 
@@ -56,7 +71,7 @@ export default function LeaderboardClient({
 
   return (
     <>
-      <div className="flex flex-col justify-center items-center pt-6 gap-3">
+      <div className="flex flex-row justify-center items-center pt-6 gap-3">
         <label htmlFor="date-filter" className="text-xl">
           Filter by Date
         </label>
@@ -75,65 +90,69 @@ export default function LeaderboardClient({
             Clear
           </button>
         )}
+        {leaderboard.length === 0 && (
+          <p className="text-xl">No results found.</p>
+        )}
       </div>
-      <div className="flex flex-wrap grow gap-6 p-6">
-        <div className="flex flex-col grow items-center justify-center gap-6">
-          <div className="text-center text-4xl">Leaderboard</div>
-          <ul className="flex flex-col text-2xl gap-3">
-            {leaderboard
-              .sort((a, b) => b.score - a.score)
-              .map((d, i) => (
-                <li
-                  key={d.username}
-                  className="flex items-center justify-between text-sm sm:text-2xl text-center gap-6"
-                >
-                  <div>{i + 1 + ". " + d.username}</div>
-                  <div>{"Score: " + d.score.toFixed(2)}</div>
-                </li>
-              ))}
-          </ul>
+      {leaderboard.length > 0 && (
+        <div className="flex p-6">
+          <table className="w-full text-sm sm:text-xl text-center">
+            <thead className="text-xs sm:text-lg bg-gray-100">
+              <tr>
+                <th className="p-3 sm:p-4"></th>
+                <th className="p-3 sm:p-4"></th>
+                <th className="p-3 sm:p-4"></th>
+                <th colSpan={3} className="p-3 sm:p-4 border-l">
+                  Interest Rate Version
+                </th>
+                <th colSpan={3} className="p-3 sm:p-4 border-l">
+                  Money Growth Version
+                </th>
+              </tr>
+              <tr>
+                <th className="p-3 sm:p-4">#</th>
+                <th className="p-3 sm:p-4 text-left">Player</th>
+                <th className="p-3 sm:p-4">Total Score</th>
+                <th className="p-3 sm:p-4 border-l">Game 1</th>
+                <th className="p-3 sm:p-4">Game 2</th>
+                <th className="p-3 sm:p-4 font-semibold">Total</th>
+                <th className="p-3 sm:p-4 border-l">Game 1</th>
+                <th className="p-3 sm:p-4">Game 2</th>
+                <th className="p-3 sm:p-4 font-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {leaderboard
+                .sort((a, b) => b.score - a.score)
+                .map((d, i) => (
+                  <tr key={d.username} className="bg-white hover:bg-gray-50">
+                    <td className="p-3 sm:p-4 font-medium">{i + 1}</td>
+                    <td className="p-3 sm:p-4 font-medium text-left">
+                      {d.username}
+                    </td>
+                    <td className="p-3 sm:p-4 font-bold text-lg sm:text-2xl">
+                      {d.score.toFixed(2)}
+                    </td>
+                    <td className="p-3 sm:p-4 border-l">
+                      {d.interest.s1.toFixed(2)}
+                    </td>
+                    <td className="p-3 sm:p-4">{d.interest.s2.toFixed(2)}</td>
+                    <td className="p-3 sm:p-4 font-semibold">
+                      {d.interest.total.toFixed(2)}
+                    </td>
+                    <td className="p-3 sm:p-4 border-l">
+                      {d.money.s1.toFixed(2)}
+                    </td>
+                    <td className="p-3 sm:p-4">{d.money.s2.toFixed(2)}</td>
+                    <td className="p-3 sm:p-4 font-semibold">
+                      {d.money.total.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
         </div>
-        <div className="flex flex-col grow items-center justify-center gap-6">
-          <div className="text-center text-4xl">Interest Rate Version</div>
-          <ul className="flex flex-col text-2xl gap-3">
-            {aggregate
-              .sort((a, b) => b.score - a.score)
-              .map((d, i) => (
-                <li
-                  key={d.username}
-                  className="flex items-center justify-between text-sm sm:text-2xl text-center gap-6"
-                >
-                  <div>{i + 1 + ". " + d.username}</div>
-                  <div className="flex flex-col text-xs sm:text-xl">
-                    <div>{"Game 1: " + d.s1.toFixed(2)}</div>
-                    <div>{"Game 2: " + d.s2.toFixed(2)}</div>
-                  </div>
-                  <div>{"Total: " + d.score.toFixed(2)}</div>
-                </li>
-              ))}
-          </ul>
-        </div>
-        <div className="flex flex-col grow items-center justify-center gap-6">
-          <div className="text-center text-4xl">Money Growth Version</div>
-          <ul className="flex flex-col text-2xl gap-3">
-            {maggregate
-              .sort((a, b) => b.score - a.score)
-              .map((d, i) => (
-                <li
-                  key={d.username + "?mg"}
-                  className="flex items-center justify-between text-sm sm:text-2xl text-center gap-6"
-                >
-                  <div>{i + 1 + ". " + d.username}</div>
-                  <div className="flex flex-col text-xs sm:text-xl">
-                    <div>{"Game 1: " + d.s1.toFixed(2)}</div>
-                    <div>{"Game 2: " + d.s2.toFixed(2)}</div>
-                  </div>
-                  <div>{"Total: " + d.score.toFixed(2)}</div>
-                </li>
-              ))}
-          </ul>
-        </div>
-      </div>
+      )}
     </>
   );
 }
