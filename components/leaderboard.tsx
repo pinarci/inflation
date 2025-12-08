@@ -95,9 +95,9 @@ export default function LeaderboardClient({
         )}
       </div>
       {leaderboard.length > 0 && (
-        <div className="flex p-6">
+        <div className="p-6">
           <table className="w-full text-sm sm:text-xl text-center">
-            <thead className="text-xs sm:text-lg bg-gray-100">
+            <thead className="text-xs sm:text-lg bg-gray-100 sticky top-0 z-10">
               <tr>
                 <th className="p-3 sm:p-4"></th>
                 <th className="p-3 sm:p-4"></th>
