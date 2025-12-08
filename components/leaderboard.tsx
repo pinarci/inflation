@@ -71,7 +71,7 @@ export default function LeaderboardClient({
 
   return (
     <>
-      <div className="flex flex-row justify-center items-center pt-6 gap-3">
+      <div className="flex flex-row justify-center items-center p-6 gap-3">
         <label htmlFor="date-filter" className="text-xl">
           Filter by Date
         </label>
@@ -95,63 +95,61 @@ export default function LeaderboardClient({
         )}
       </div>
       {leaderboard.length > 0 && (
-        <div className="p-6">
-          <table className="w-full text-sm sm:text-xl text-center">
-            <thead className="text-xs sm:text-lg bg-gray-100 sticky top-0 z-10">
-              <tr>
-                <th className="p-3 sm:p-4"></th>
-                <th className="p-3 sm:p-4"></th>
-                <th className="p-3 sm:p-4"></th>
-                <th colSpan={3} className="p-3 sm:p-4 border-l">
-                  Interest Rate Version
-                </th>
-                <th colSpan={3} className="p-3 sm:p-4 border-l">
-                  Money Growth Version
-                </th>
-              </tr>
-              <tr>
-                <th className="p-3 sm:p-4">#</th>
-                <th className="p-3 sm:p-4 text-left">Player</th>
-                <th className="p-3 sm:p-4">Total Score</th>
-                <th className="p-3 sm:p-4 border-l">Game 1</th>
-                <th className="p-3 sm:p-4">Game 2</th>
-                <th className="p-3 sm:p-4 font-semibold">Total</th>
-                <th className="p-3 sm:p-4 border-l">Game 1</th>
-                <th className="p-3 sm:p-4">Game 2</th>
-                <th className="p-3 sm:p-4 font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {leaderboard
-                .sort((a, b) => b.score - a.score)
-                .map((d, i) => (
-                  <tr key={d.username} className="bg-white hover:bg-gray-50">
-                    <td className="p-3 sm:p-4 font-medium">{i + 1}</td>
-                    <td className="p-3 sm:p-4 font-medium text-left">
-                      {d.username}
-                    </td>
-                    <td className="p-3 sm:p-4 font-bold text-lg sm:text-2xl">
-                      {d.score.toFixed(2)}
-                    </td>
-                    <td className="p-3 sm:p-4 border-l">
-                      {d.interest.s1.toFixed(2)}
-                    </td>
-                    <td className="p-3 sm:p-4">{d.interest.s2.toFixed(2)}</td>
-                    <td className="p-3 sm:p-4 font-semibold">
-                      {d.interest.total.toFixed(2)}
-                    </td>
-                    <td className="p-3 sm:p-4 border-l">
-                      {d.money.s1.toFixed(2)}
-                    </td>
-                    <td className="p-3 sm:p-4">{d.money.s2.toFixed(2)}</td>
-                    <td className="p-3 sm:p-4 font-semibold">
-                      {d.money.total.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+        <table className="w-full text-sm sm:text-xl text-center">
+          <thead className="text-xs sm:text-lg bg-gray-100 sticky top-0 z-10">
+            <tr>
+              <th className="p-3 sm:p-4"></th>
+              <th className="p-3 sm:p-4"></th>
+              <th className="p-3 sm:p-4"></th>
+              <th colSpan={3} className="p-3 sm:p-4 border-l">
+                Interest Rate Version
+              </th>
+              <th colSpan={3} className="p-3 sm:p-4 border-l">
+                Money Growth Version
+              </th>
+            </tr>
+            <tr>
+              <th className="p-3 sm:p-4">#</th>
+              <th className="p-3 sm:p-4 text-left">Player</th>
+              <th className="p-3 sm:p-4">Total Score</th>
+              <th className="p-3 sm:p-4 border-l">Game 1</th>
+              <th className="p-3 sm:p-4">Game 2</th>
+              <th className="p-3 sm:p-4 font-semibold">Total</th>
+              <th className="p-3 sm:p-4 border-l">Game 1</th>
+              <th className="p-3 sm:p-4">Game 2</th>
+              <th className="p-3 sm:p-4 font-semibold">Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {leaderboard
+              .sort((a, b) => b.score - a.score)
+              .map((d, i) => (
+                <tr key={d.username} className="bg-white hover:bg-gray-50">
+                  <td className="p-3 sm:p-4 font-medium">{i + 1}</td>
+                  <td className="p-3 sm:p-4 font-medium text-left">
+                    {d.username}
+                  </td>
+                  <td className="p-3 sm:p-4 font-bold text-lg sm:text-2xl">
+                    {d.score.toFixed(2)}
+                  </td>
+                  <td className="p-3 sm:p-4 border-l">
+                    {d.interest.s1.toFixed(2)}
+                  </td>
+                  <td className="p-3 sm:p-4">{d.interest.s2.toFixed(2)}</td>
+                  <td className="p-3 sm:p-4 font-semibold">
+                    {d.interest.total.toFixed(2)}
+                  </td>
+                  <td className="p-3 sm:p-4 border-l">
+                    {d.money.s1.toFixed(2)}
+                  </td>
+                  <td className="p-3 sm:p-4">{d.money.s2.toFixed(2)}</td>
+                  <td className="p-3 sm:p-4 font-semibold">
+                    {d.money.total.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
       )}
     </>
   );
