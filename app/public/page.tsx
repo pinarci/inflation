@@ -1,6 +1,4 @@
-import { cookies, headers } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/types/supabase";
+import { cookies } from "next/headers";
 import { DeezButton } from "@/components/deez-button";
 import { DeezCounter } from "@/components/deez-counter";
 import { LoadingButton } from "@/components/loading-button";
@@ -9,25 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import Hamburger from "@/components/hamburger";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { getPlayerSuffix, getRequestIp } from "@/lib/request";
 
-export default async function Public() {
-  const header = headers();
-  const ip = header.get("x-real-ip") ?? "95.183.240.91"; // header.get("x-forwarded-for")
-  const reverseIp = ip.split(".").reverse();
-  const iHope = reverseIp[0] + reverseIp[1];
-
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
-  );
+export default async function Public({
+  searchParams,
+}: {
+  searchParams: { error?: string };
+}) {
+  const ip = getRequestIp();
+  const iHope = getPlayerSuffix(ip);
+  const supabase = createServerSupabase();
 
   const { data: game, error: gameError } = await supabase
     .from("games")
@@ -35,12 +25,12 @@ export default async function Public() {
     .order("created_at", { ascending: false })
     .limit(1);
   if (gameError) {
-    redirect(`/public?error=${gameError.message}`);
+    throw new Error(gameError.message);
   }
 
   if (game.length === 0) {
     return (
-      <main className="min-h-screen flex justify-center items-center text-2xl p-12">
+      <main className="min-h-[calc(100vh-4rem)] flex justify-center items-center p-6 text-center text-xl">
         <div className="flex">Game not found</div>
       </main>
     );
@@ -56,7 +46,7 @@ export default async function Public() {
     .eq("ip", ip)
     .eq("game", gameId);
   if (playerError) {
-    redirect(`/public?error=${playerError.message}`);
+    throw new Error(playerError.message);
   }
 
   const playerId = player[0]?.id;
@@ -81,19 +71,8 @@ export default async function Public() {
       .limit(5);
 
     return (
-      <main className="min-h-screen flex flex-col">
-        <div className="flex flex-row justify-center border-b h-[57px]">
-          <div className="flex items-center justify-between max-w-4xl w-full px-4">
-            <div className="flex w-[90px] justify-start">
-              <Hamburger />
-            </div>
-            <a href="/" className="hidden sm:flex text-3xl font-semibold">
-              MacroGames
-            </a>
-            <div className="flex w-[90px] justify-end"></div>
-          </div>
-        </div>
-        <div className="flex flex-col grow justify-center items-center gap-6 p-12">
+      <main className="min-h-[calc(100vh-4rem)] flex flex-col">
+        <div className="flex flex-col grow justify-center items-center gap-6 p-6 sm:p-12">
           {playerPeriod > 0 && (
             <div className="flex flex-col items-center text-2xl">
               <div>
@@ -138,6 +117,7 @@ export default async function Public() {
               <a
                 href="https://sites.google.com/view/erutedu/home"
                 target="_blank"
+                rel="noreferrer"
               >
                 About us
               </a>
@@ -158,7 +138,7 @@ export default async function Public() {
 
   if (player.length === 0 && gamePeriod > 0) {
     return (
-      <main className="min-h-screen flex justify-center items-center text-2xl p-12">
+      <main className="min-h-[calc(100vh-4rem)] flex justify-center items-center p-6 text-center text-xl">
         <div className="flex">You are late</div>
       </main>
     );
@@ -181,17 +161,7 @@ export default async function Public() {
       redirect("/public?error=Invalid%20username");
     }
 
-    const supabaseUction = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
+    const supabaseUction = createServerSupabase();
 
     const unique = uparsed.data.username + "." + iHope;
     cookies().set("username", unique);
@@ -224,10 +194,11 @@ export default async function Public() {
     }
 
     return (
-      <main className="min-h-screen flex flex-col justify-center items-center p-12">
-        <form className="flex flex-col gap-6" action={username}>
-          <div className="flex justify-center">Enter your username</div>
+      <main className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center p-6">
+        <form className="w-full max-w-sm space-y-4 rounded-2xl border bg-card p-6 shadow-sm" action={username}>
+          <label htmlFor="public-username" className="block text-center text-xl font-semibold">Enter your username</label>
           <Input
+            id="public-username"
             type="text"
             name="username"
             placeholder="Username"
@@ -235,6 +206,7 @@ export default async function Public() {
             required
           />
           <LoadingButton />
+          {searchParams.error ? <p role="alert" className="text-center text-sm text-destructive">{searchParams.error}</p> : null}
         </form>
       </main>
     );
@@ -248,8 +220,8 @@ export default async function Public() {
 
   if (gamePeriod < playerPeriod) {
     return (
-      <main className="min-h-screen flex flex-col justify-center items-center gap-6 text-2xl p-12">
-        <PublicFetcher player={playerData} />
+      <main className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center gap-4 p-6 text-xl">
+        <PublicFetcher player={playerData} gameId={gameId} />
       </main>
     );
   }
@@ -267,17 +239,7 @@ export default async function Public() {
       redirect("/public?error=Invalid%20contribution%20amount");
     }
 
-    const supabaseEction = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
+    const supabaseEction = createServerSupabase();
 
     const { error: rpcError } = await supabaseEction.rpc("publicg", {
       cont: parsed.data.bid,
@@ -293,7 +255,7 @@ export default async function Public() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col justify-center items-center gap-6 text-lg sm:text-2xl p-12">
+    <main className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center gap-6 p-6 text-lg sm:text-xl">
       <div>
         {firstName}
         <span className="opacity-25">#{uniqueName}</span>
@@ -317,6 +279,7 @@ export default async function Public() {
           </div>
         </div>
         <DeezCounter />
+        {searchParams.error ? <p role="alert" className="text-center text-sm text-destructive">{searchParams.error}</p> : null}
       </form>
     </main>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 
 type Logs = {
@@ -44,10 +44,10 @@ export default function ResultPage({ data }: { data: Logs }) {
 
   return (
     <>
-      <div className="flex flex-wrap justify-center gap-3 sm:gap-16 dark:text-secondary">
+      <div className="grid w-full max-w-4xl gap-6 md:grid-cols-2 dark:text-secondary">
+        <div className="h-80 min-w-0 rounded-xl border bg-white p-2">
+        <ResponsiveContainer width="100%" height="100%">
         <LineChart
-          width={350}
-          height={350}
           data={growth}
           margin={{
             top: 20,
@@ -78,9 +78,11 @@ export default function ResultPage({ data }: { data: Logs }) {
             stroke="#ff0000"
           />
         </LineChart>
+        </ResponsiveContainer>
+        </div>
+        <div className="h-80 min-w-0 rounded-xl border bg-white p-2">
+        <ResponsiveContainer width="100%" height="100%">
         <LineChart
-          width={350}
-          height={350}
           data={plain}
           margin={{
             top: 20,
@@ -104,11 +106,13 @@ export default function ResultPage({ data }: { data: Logs }) {
             stroke="#0000ff"
           />
         </LineChart>
+        </ResponsiveContainer>
+        </div>
       </div>
       <div className="flex flex-col">
         <div className="text-2xl py-2">TEDU ERU</div>
         <Button asChild variant="secondary">
-          <a href="https://sites.google.com/view/erutedu/home" target="_blank">
+          <a href="https://sites.google.com/view/erutedu/home" target="_blank" rel="noreferrer">
             About us
           </a>
         </Button>

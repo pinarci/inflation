@@ -1,8 +1,8 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/types/supabase";
 import { redirect } from "next/navigation";
+import { calculateScore, getScoreColumn, isInterestPeriodValid } from "@/lib/economic-model";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function cbsend(
   id: number,
@@ -24,50 +24,22 @@ export async function cbsend(
     s: number;
   }
 ) {
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
+  const supabase = createServerSupabase();
+  const done = calculateScore(
+    [data.i1, data.i2, data.i3, data.i4],
+    [data.o1, data.o2, data.o3, data.o4]
   );
 
-  function formula(r: number, ib: number, ia: number, oa: number) {
-    const og = ib - r + 1;
-    const inf = ib + og;
-    const to = Number(og.toFixed(2));
-    const ti = Number(inf.toFixed(2));
-    if (to === oa && ti === ia) return true;
-    return false;
-  }
-
-  const calc =
-    200 -
-    Math.pow(data.i1 - 2, 2) -
-    Math.pow(data.i2 - 2, 2) -
-    Math.pow(data.i3 - 2, 2) -
-    Math.pow(data.i4 - 2, 2) +
-    5 * data.o1 +
-    5 * data.o2 +
-    5 * data.o3 +
-    5 * data.o4;
-  const done = calc < 0 ? 0 : calc;
-
-  const updateObject = {
-    id,
-    game,
-    ...(game === 1 ? { s1: data.s } : { s2: data.s }),
-  };
+  const updateObject =
+    getScoreColumn(game) === "s1"
+      ? { id, game, s1: data.s }
+      : { id, game, s2: data.s };
 
   if (
-    formula(data.r1, data.i0, data.i1, data.o1) &&
-    formula(data.r2, data.i1, data.i2, data.o2) &&
-    formula(data.r3, data.i2, data.i3, data.o3) &&
-    formula(data.r4, data.i3, data.i4, data.o4)
+    isInterestPeriodValid(data.r1, data.i0, data.i1, data.o1) &&
+    isInterestPeriodValid(data.r2, data.i1, data.i2, data.o2) &&
+    isInterestPeriodValid(data.r3, data.i2, data.i3, data.o3) &&
+    isInterestPeriodValid(data.r4, data.i3, data.i4, data.o4)
   ) {
     if (done === data.s) {
       const { error } = await supabase
@@ -78,7 +50,7 @@ export async function cbsend(
         return { message: error.message };
       }
 
-      redirect("/");
+      redirect("/inflation");
     }
 
     return { message: "Score does not match with the server" };

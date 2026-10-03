@@ -6,17 +6,14 @@ export const DeezCounter = () => {
   const [seconds, setSeconds] = useState(15);
 
   useEffect(() => {
-    const tick = () => {
-      if (seconds === 0) return;
-      setSeconds(seconds - 1);
-    };
-    const timer = setInterval(tick, 1000);
+    if (seconds === 0) return;
+    const timer = setInterval(() => setSeconds((current) => current - 1), 1000);
     return () => clearInterval(timer);
   }, [seconds]);
 
   return (
     seconds > 0 && (
-      <div className="text-red-500 text-2xl font-mono">
+      <div className="text-destructive text-lg font-mono" role="timer" aria-live="polite">
         {seconds} seconds left
       </div>
     )

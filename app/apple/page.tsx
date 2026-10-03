@@ -1,6 +1,4 @@
-import { cookies, headers } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/types/supabase";
+import { cookies } from "next/headers";
 import { DeezButton } from "@/components/deez-button";
 import { DeezCounter } from "@/components/deez-counter";
 import { LoadingButton } from "@/components/loading-button";
@@ -8,7 +6,8 @@ import { GameFetcher } from "@/components/game-fetcher";
 import { Input } from "@/components/ui/input";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import Hamburger from "@/components/hamburger";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { getPlayerSuffix, getRequestIp } from "@/lib/request";
 
 import dynamic from "next/dynamic";
 const ResultPage = dynamic(() => import("@/components/result-page"), {
@@ -18,34 +17,25 @@ const Consume = dynamic(() => import("@/components/consume"), {
   ssr: false,
 });
 
-export default async function Apple() {
-  const header = headers();
-  const ip = header.get("x-real-ip") ?? "95.183.240.91"; // header.get("x-forwarded-for")
-  const reverseIp = ip.split(".").reverse();
-  const iHope = reverseIp[0] + reverseIp[1];
-
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
-  );
+export default async function Apple({
+  searchParams,
+}: {
+  searchParams: { error?: string };
+}) {
+  const ip = getRequestIp();
+  const iHope = getPlayerSuffix(ip);
+  const supabase = createServerSupabase();
 
   const { data: game, error: gameError } = await supabase
     .from("igames")
     .select("id, active, period");
   if (gameError) {
-    redirect(`/apple?error=${gameError.message}`);
+    throw new Error(gameError.message);
   }
 
   if (game.length === 0) {
     return (
-      <main className="min-h-screen flex justify-center items-center text-2xl p-12">
+      <main className="min-h-[calc(100vh-4rem)] flex justify-center items-center p-6 text-center text-xl">
         <div className="flex">Game not found</div>
       </main>
     );
@@ -61,7 +51,7 @@ export default async function Apple() {
     .eq("ip", ip)
     .eq("game", gameId);
   if (playerError) {
-    redirect(`/apple?error=${playerError.message}`);
+    throw new Error(playerError.message);
   }
 
   const playerId = player[0]?.id;
@@ -83,7 +73,7 @@ export default async function Apple() {
       .select("balances, expenditure, period, price")
       .eq("game", gameId);
     if (logsError) {
-      redirect(`/apple?error=${logsError.message}`);
+      throw new Error(logsError.message);
     }
 
     const { data: winners } = await supabase
@@ -94,19 +84,8 @@ export default async function Apple() {
       .limit(5);
 
     return (
-      <main className="min-h-screen flex flex-col">
-        <div className="flex flex-row justify-center border-b h-[57px]">
-          <div className="flex items-center justify-between max-w-4xl w-full px-4">
-            <div className="flex w-[90px] justify-start">
-              <Hamburger />
-            </div>
-            <a href="/" className="hidden sm:flex text-3xl font-semibold">
-              MacroGames
-            </a>
-            <div className="flex w-[90px] justify-end"></div>
-          </div>
-        </div>
-        <div className="flex flex-col grow justify-center items-center gap-3 p-12">
+      <main className="min-h-[calc(100vh-4rem)] flex flex-col">
+        <div className="flex flex-col grow justify-center items-center gap-4 p-6 sm:p-12">
           {fApple > 0 && (
             <>
               <div className="text-2xl">
@@ -161,7 +140,7 @@ export default async function Apple() {
 
   if (player.length === 0 && gamePeriod > 0) {
     return (
-      <main className="min-h-screen flex justify-center items-center text-2xl p-12">
+      <main className="min-h-[calc(100vh-4rem)] flex justify-center items-center p-6 text-center text-xl">
         <div className="flex">You are late</div>
       </main>
     );
@@ -184,17 +163,7 @@ export default async function Apple() {
       redirect("/apple?error=Invalid%20username");
     }
 
-    const supabaseUction = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
+    const supabaseUction = createServerSupabase();
 
     const unique = uparsed.data.username + "." + iHope;
     cookies().set("username", unique);
@@ -227,10 +196,11 @@ export default async function Apple() {
     }
 
     return (
-      <main className="min-h-screen flex flex-col justify-center items-center p-12">
-        <form className="flex flex-col gap-6" action={username}>
-          <div className="flex justify-center">Enter your username</div>
+      <main className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center p-6">
+        <form className="w-full max-w-sm space-y-4 rounded-2xl border bg-card p-6 shadow-sm" action={username}>
+          <label htmlFor="apple-username" className="block text-center text-xl font-semibold">Enter your username</label>
           <Input
+            id="apple-username"
             type="text"
             name="username"
             placeholder="Username"
@@ -238,6 +208,7 @@ export default async function Apple() {
             required
           />
           <LoadingButton />
+          {searchParams.error ? <p role="alert" className="text-center text-sm text-destructive">{searchParams.error}</p> : null}
         </form>
       </main>
     );
@@ -251,8 +222,8 @@ export default async function Apple() {
 
   if (gamePeriod < playerPeriod) {
     return (
-      <main className="min-h-screen flex flex-col justify-center items-center gap-6 text-2xl p-12">
-        <GameFetcher player={playerData} />
+      <main className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center gap-4 p-6 text-xl">
+        <GameFetcher player={playerData} gameId={gameId} />
       </main>
     );
   }
@@ -270,17 +241,7 @@ export default async function Apple() {
       redirect("/apple?error=Invalid%20bid%20amount");
     }
 
-    const supabaseEction = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
+    const supabaseEction = createServerSupabase();
 
     const { error: rpcError } = await supabaseEction.rpc("safeplay", {
       dema: parsed.data.amount,
@@ -301,13 +262,13 @@ export default async function Apple() {
     .eq("game", gameId)
     .eq("period", gamePeriod - 1);
   if (logError) {
-    redirect(`/apple?error=${logError.message}`);
+    throw new Error(logError.message);
   }
 
   const price = log[0]?.price ?? 0;
 
   return (
-    <main className="min-h-screen flex flex-col justify-center items-center gap-6 text-lg sm:text-2xl p-12">
+    <main className="min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center gap-6 p-6 text-lg sm:text-xl">
       <div>
         {firstName}
         <span className="opacity-25">#{uniqueName}</span>
@@ -332,6 +293,7 @@ export default async function Apple() {
           </div>
         </div>
         <DeezCounter />
+        {searchParams.error ? <p role="alert" className="text-center text-sm text-destructive">{searchParams.error}</p> : null}
       </form>
     </main>
   );

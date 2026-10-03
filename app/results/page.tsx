@@ -1,65 +1,57 @@
-import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/types/supabase";
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import Link from "next/link";
 import LeaderboardClient from "@/components/leaderboard";
+import { PageShell } from "@/components/page-shell";
+import { Button } from "@/components/ui/button";
+import { createServerSupabase } from "@/lib/supabase/server";
 
-import { cookies } from "next/headers";
+export const metadata: Metadata = { title: "Results" };
+export const dynamic = "force-dynamic";
 
 export default async function Results() {
-  const username = cookies().get("username")?.value;
+  const supabase = createServerSupabase();
+  const [interestResult, moneyResult] = await Promise.all([
+    supabase.from("cbgame").select("username, s1, s2, created_at"),
+    supabase.from("mgame").select("username, s1, s2, created_at"),
+  ]);
 
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
-  );
+  if (interestResult.error) throw new Error(interestResult.error.message);
+  if (moneyResult.error) throw new Error(moneyResult.error.message);
 
-  const { data, error } = await supabase
-    .from("cbgame")
-    .select("username, s1, s2, created_at");
-  if (error || data.length === 0) {
-    redirect("/");
-  }
-
-  const { data: mg, error: mge } = await supabase
-    .from("mgame")
-    .select("username, s1, s2, created_at");
-  if (mge || mg.length === 0) {
-    redirect("/money");
-  }
-
-  const aggregate = data.map((d) => {
-    return {
-      username: d.username,
-      s1: d.s1,
-      s2: d.s2,
-      score: d.s1 + d.s2,
-      created_at: d.created_at,
-    };
-  });
-
-  const maggregate = mg.map((d) => {
-    return {
-      username: d.username,
-      s1: d.s1,
-      s2: d.s2,
-      score: d.s1 + d.s2,
-      created_at: d.created_at,
-    };
-  });
+  const toScores = (rows: typeof interestResult.data) =>
+    rows.map((row) => ({
+      username: row.username,
+      s1: row.s1,
+      s2: row.s2,
+      score: row.s1 + row.s2,
+      created_at: row.created_at,
+    }));
 
   return (
-    <main className="min-h-screen flex flex-col">
-      <LeaderboardClient
-        initialAggregate={aggregate}
-        initialMaggregate={maggregate}
-      />
-    </main>
+    <PageShell>
+      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary/60">Performance</p>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Leaderboard</h1>
+          <p className="mt-3 text-muted-foreground">Compare Game 1, Game 2, and combined scores across both monetary-policy simulations.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm"><Link href="/">Home</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href="/inflation">Interest Rate</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href="/money">Money Growth</Link></Button>
+        </div>
+      </div>
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border bg-card p-4">
+          <p className="font-semibold">Interest Rate</p>
+          <p className="mt-1 text-sm text-muted-foreground">{interestResult.data.length} player {interestResult.data.length === 1 ? "record" : "records"}</p>
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <p className="font-semibold">Money Growth</p>
+          <p className="mt-1 text-sm text-muted-foreground">{moneyResult.data.length} player {moneyResult.data.length === 1 ? "record" : "records"}</p>
+        </div>
+      </div>
+      <LeaderboardClient initialAggregate={toScores(interestResult.data)} initialMaggregate={toScores(moneyResult.data)} />
+    </PageShell>
   );
 }

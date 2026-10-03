@@ -1,11 +1,14 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
-  title: "MacroGames",
-  description:
-    "Explore MacroGames.live, an innovative platform designed for the study and simulation of macroeconomic principles through interactive gaming. Engage in complex scenarios that illustrate key economic concepts such as central banking, public goods, and money.",
+  title: {
+    default: "EconForAll",
+    template: "%s | EconForAll",
+  },
+  description: "Learn economics by playing interactive policy simulations.",
 };
 
 export default function RootLayout({
@@ -15,13 +18,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className="min-h-screen antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="white"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
+          <SiteHeader />
           {children}
         </ThemeProvider>
       </body>

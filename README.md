@@ -1,35 +1,42 @@
-# Inflation (Next.js) - Supabase + Vercel setup
+# EconForAll
 
-This project uses Supabase for database and Vercel for hosting. Below are quick setup steps for local development and a Vercel deployment.
+EconForAll is a Next.js application for classroom economics simulations. The public experience centers on the Interest Rate and Money Growth games, with a shared leaderboard and protected administration tools. Historical Public Goods and Apple Market routes remain available but are not part of the primary navigation.
 
-## Environment variables
-Create a `.env.local` from the included `.env.local.example` and populate the values from your Supabase project.
+## Primary routes
 
-- NEXT_PUBLIC_SUPABASE_URL: Supabase project URL (public)
-- NEXT_PUBLIC_SUPABASE_ANON_KEY: Supabase anon/public key
-- NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY: (Optional) Service Role key for trusted server operations — keep this secret and set it only in Vercel (do not commit)
+- `/` — application home
+- `/inflation` — Interest Rate game
+- `/money` — Money Growth game
+- `/results` — shared leaderboard
+- `/admin` — protected score and player maintenance
 
 ## Local development
-1. Copy `.env.local.example` to `.env.local` and fill the keys.
-2. Install dependencies and run the dev server:
+
+Copy `.env.local.example` to `.env.local` and set:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (used only by browser polling)
+- `NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY` (server only; never expose it with a `NEXT_PUBLIC_` prefix)
+- `NEXT_PRIVATE_ADMIN_PASSWORD`
+
+Then run:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open http://localhost:3000
+## Quality checks
 
-## Deploy to Vercel
-1. Push the repository to GitHub (or connect your Git provider).
-2. In the Vercel dashboard, create a new project and connect the repo.
-3. In Project Settings → Environment Variables, add the following keys (use the exact names):
-   - NEXT_PUBLIC_SUPABASE_URL
-   - NEXT_PUBLIC_SUPABASE_ANON_KEY
-   - NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY (set only for Production if needed)
-4. Deploy. Vercel's build step will run `npm run build`.
+```bash
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
 
-## Notes and best practices
-- Only use the Service Role key on the server (server actions, API routes). The codebase already uses `process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY` in some server-only modules.
-- For client-side usage, use the public NEXT_PUBLIC keys.
-- Consider using Supabase Auth and row-level security in your Supabase project for secure access.
+The protected numerical model is documented in [`docs/ECONOMIC_MODEL.md`](docs/ECONOMIC_MODEL.md) and covered by regression tests in `lib/economic-model.test.ts`. Do not modify its formulas, constants, rounding, scoring, periods, or completion behavior without explicit approval from the model owner.
+
+## Data access
+
+Server components and actions use `lib/supabase/server.ts`. Browser polling uses the singleton public client in `lib/supabase/client.ts`. Historical Supabase types for all four games are intentionally retained in `types/supabase.ts`.

@@ -7,14 +7,14 @@ export function DeezButton({ val }: { val: number }) {
   const fVal = parseFloat(val.toFixed(2));
   return pending ? (
     <button
-      className="w-40 h-40 opacity-25 bg-secondary border border-primary font-bold"
+      className="h-28 w-32 rounded-lg border bg-secondary font-bold opacity-50 sm:h-36 sm:w-40"
       disabled
     >
       {fVal} GL
     </button>
   ) : (
     <button
-      className="w-40 h-40 bg-secondary border border-primary font-bold hover:bg-primary hover:text-secondary"
+      className="h-28 w-32 rounded-lg border bg-secondary font-bold transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-36 sm:w-40"
       type="submit"
       name="bid"
       value={val}

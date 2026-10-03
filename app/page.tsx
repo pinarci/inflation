@@ -1,136 +1,77 @@
-import { cookies, headers } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/types/supabase";
-import { Input } from "@/components/ui/input";
-import { LoadingButton } from "@/components/loading-button";
-import { redirect } from "next/navigation";
-import { z } from "zod";
-import Hamburger from "@/components/hamburger";
-import dynamic from "next/dynamic";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowRight, BarChart3, Landmark, WalletCards } from "lucide-react";
+import { NewPlayerAction } from "@/components/new-player-action";
+import { PageShell } from "@/components/page-shell";
+import { Button } from "@/components/ui/button";
 
-const DNGame = dynamic(() => import("@/components/cbgame"), { ssr: false });
+export const metadata: Metadata = {
+  title: "EconForAll",
+  description: "Learn economics by playing interactive monetary-policy games.",
+};
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: { message: string };
-}) {
-  const ip = headers().get("x-real-ip") ?? "95.183.240.91";
-  const username = cookies().get("username")?.value ?? "dn";
+const games = [
+  {
+    href: "/inflation",
+    title: "Interest Rate Game",
+    description: "Use the policy interest rate to guide inflation and the output gap through a four-period simulation.",
+    icon: Landmark,
+    action: "Play Interest Rate",
+  },
+  {
+    href: "/money",
+    title: "Money Growth Game",
+    description: "Choose money growth and see how your decisions shape inflation and economic activity over time.",
+    icon: WalletCards,
+    action: "Play Money Growth",
+  },
+] as const;
 
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
-  );
-
-  const { data: player, error: playerError } = await supabase
-    .from("cbgame")
-    .select("id, game")
-    .eq("ip", ip)
-    .eq("username", username);
-  if (playerError) {
-    redirect(`/?message=${playerError.message}`);
-  }
-
-  async function setUsername(formData: FormData) {
-    "use server";
-
-    const uchema = z.object({
-      username: z
-        .string()
-        .min(3)
-        .max(11)
-        .regex(/^[a-zA-Z0-9]+$/),
-    });
-    const uparsed = uchema.safeParse({
-      username: formData.get("username"),
-    });
-    if (!uparsed.success) {
-      redirect("/?message=Invalid%20username");
-    }
-
-    const supabaseUction = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
-
-    const { error: newError } = await supabaseUction.from("cbgame").insert({
-      ip,
-      username: uparsed.data.username,
-      game: 0,
-      s1: 0,
-      s2: 0,
-    });
-    if (newError) {
-      if (newError.code === "23505") {
-        redirect("/?message=Username%20taken");
-      }
-      redirect(`/?message=${newError.message}`);
-    }
-
-    cookies().set("username", uparsed.data.username);
-
-    redirect("/");
-  }
-
-  if (player.length === 0) {
-    return (
-      <main className="min-h-screen flex justify-center items-center p-12">
-        <form className="flex flex-col gap-6" action={setUsername}>
-          <div className="flex justify-center">Enter your username</div>
-          <Input
-            type="text"
-            name="username"
-            className="text-sm"
-            placeholder="Username"
-            pattern="[a-zA-Z0-9]{3,11}"
-            required
-          />
-          <LoadingButton />
-          {searchParams?.message && (
-            <p className="text-red-500 text-center">{searchParams.message}</p>
-          )}
-        </form>
-      </main>
-    );
-  }
-
-  const playerId = player[0].id;
-  const playerGame = player[0].game;
-
+export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col">
-      {/* <div className="flex flex-row justify-center border-b h-[57px]">
-        <div className="flex items-center justify-between max-w-4xl w-full px-4">
-          <div className="flex w-[90px] justify-start">
-            <Hamburger />
-          </div>
-          <a href="/" className="hidden sm:flex text-3xl font-semibold">
-            MacroGames
-          </a>
-          <div className="flex w-[90px] justify-end"></div>
+    <PageShell className="justify-center">
+      <section className="mx-auto w-full max-w-5xl py-6 sm:py-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/60">
+            Interactive economics laboratory
+          </p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-6xl">EconForAll</h1>
+          <p className="mt-4 text-lg text-muted-foreground sm:text-xl">Learn economics by playing.</p>
+          <p className="mx-auto mt-5 max-w-2xl leading-7 text-muted-foreground">
+            Make policy decisions, observe their consequences, and compare your results in focused classroom-ready simulations.
+          </p>
         </div>
-      </div> */}
-      <div className="flex flex-col grow justify-center gap-6">
-        <DNGame uid={playerId} game={playerGame} />
-        {searchParams?.message && (
-          <p className="text-red-500 text-center">{searchParams.message}</p>
-        )}
-      </div>
-    </main>
+
+        <div className="mt-10 grid gap-5 md:grid-cols-2">
+          {games.map(({ href, title, description, icon: Icon, action }) => (
+            <article key={href} className="flex flex-col rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-accent text-accent-foreground">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <h2 className="mt-5 text-2xl font-semibold tracking-tight">{title}</h2>
+              <p className="mt-3 flex-1 leading-7 text-muted-foreground">{description}</p>
+              <Button asChild className="mt-6 w-full sm:w-fit">
+                <Link href={href}>
+                  {action}
+                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-6 flex justify-center">
+          <Button asChild variant="outline" size="lg">
+            <Link href="/results">
+              <BarChart3 className="mr-2 h-4 w-4" aria-hidden="true" />
+              View Results
+            </Link>
+          </Button>
+        </div>
+        <div className="mt-3 text-center">
+          <NewPlayerAction label="Start new player" destination="/inflation" subtle />
+        </div>
+      </section>
+    </PageShell>
   );
 }

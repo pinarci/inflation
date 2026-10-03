@@ -1,22 +1,29 @@
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/types/supabase";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { LoadingButton } from "@/components/loading-button";
 import { Input } from "@/components/ui/input";
 import { redirect } from "next/navigation";
+import { createAdminSession, isAdminPassword, isAdminSession } from "@/lib/admin-session";
 
 export default async function Admin({
   searchParams,
 }: {
   searchParams: { error: string; message: string };
 }) {
-  const password = cookies().get("adminpw")?.value;
+  const session = cookies().get("admin-session")?.value;
 
   async function setCookie(formData: FormData) {
     "use server";
 
-    const yummy = String(formData.get("adminpw"));
-    cookies().set("adminpw", yummy);
+    if (!isAdminPassword(formData.get("adminpw"))) {
+      redirect("/public/admin?error=Wrong%20password");
+    }
+    cookies().set("admin-session", createAdminSession(), {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 8,
+    });
 
     redirect("/public/admin");
   }
@@ -24,22 +31,11 @@ export default async function Admin({
   async function admin(formData: FormData) {
     "use server";
 
-    const pw = String(formData.get("dn"));
-    if (pw !== process.env.NEXT_PRIVATE_ADMIN_PASSWORD) {
+    if (!isAdminSession(cookies().get("admin-session")?.value)) {
       redirect("/public/admin?error=Wrong%20password");
     }
 
-    const supabaseAction = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
+    const supabaseAction = createServerSupabase();
 
     const id = Number(formData.get("id"));
     const per = Number(formData.get("per"));
@@ -59,22 +55,11 @@ export default async function Admin({
   async function endgame(formData: FormData) {
     "use server";
 
-    const pw = String(formData.get("dn"));
-    if (pw !== process.env.NEXT_PRIVATE_ADMIN_PASSWORD) {
+    if (!isAdminSession(cookies().get("admin-session")?.value)) {
       redirect("/public/admin?error=Wrong%20password");
     }
 
-    const supabaseAction = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
+    const supabaseAction = createServerSupabase();
 
     const id = Number(formData.get("id"));
     const { error } = await supabaseAction
@@ -99,24 +84,14 @@ export default async function Admin({
     redirect("/public/admin?message=Game%20ended%20successfully");
   }
 
-  if (password === process.env.NEXT_PRIVATE_ADMIN_PASSWORD) {
-    const supabase = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PRIVATE_SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
+  if (isAdminSession(session)) {
+    const supabase = createServerSupabase();
 
     const { data: game, error: gameError } = await supabase
       .from("games")
       .select("id, active, period");
     if (gameError) {
-      redirect(`/public/admin?error=${gameError.message}`);
+      throw new Error(gameError.message);
     }
     if (game.length === 0) {
       redirect("/public/admin?error=Game%20not%20found");
@@ -133,7 +108,7 @@ export default async function Admin({
       .order("balance", { ascending: false })
       .limit(1);
     if (appleError) {
-      redirect(`/public/admin?error=${appleError.message}`);
+      throw new Error(appleError.message);
     }
 
     const winner = won[0]?.username ?? "error.error";
@@ -162,7 +137,6 @@ export default async function Admin({
         <form className="flex flex-col items-center gap-6" action={admin}>
           <div className="flex">Next Period</div>
           <LoadingButton />
-          <input type="hidden" name="dn" value={password} />
           <input type="hidden" name="id" value={gameId} />
           <input type="hidden" name="per" value={gamePeriod} />
         </form>
@@ -180,7 +154,6 @@ export default async function Admin({
         >
           <div className="flex text-red-500">End Game</div>
           <LoadingButton />
-          <input type="hidden" name="dn" value={password} />
           <input type="hidden" name="id" value={gameId} />
           <input type="hidden" name="per" value={gamePeriod} />
         </form>
@@ -189,10 +162,12 @@ export default async function Admin({
   }
 
   return (
-    <main className="min-h-screen flex justify-center items-center text-2xl p-12">
-      <form className="flex flex-col justify-center gap-6" action={setCookie}>
+    <main className="min-h-[calc(100vh-4rem)] flex justify-center items-center p-6">
+      <form className="w-full max-w-sm space-y-4 rounded-2xl border bg-card p-6 shadow-sm" action={setCookie}>
+        <h1 className="text-center text-2xl font-semibold">Public Goods Admin</h1>
         <Input type="password" name="adminpw" placeholder="Password" />
-        <LoadingButton />
+        <LoadingButton className="w-full" idleLabel="Sign in" pendingLabel="Signing in…" />
+        {searchParams.error ? <p role="alert" className="text-center text-sm text-destructive">{searchParams.error}</p> : null}
       </form>
     </main>
   );
