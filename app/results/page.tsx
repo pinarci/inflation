@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LeaderboardClient from "@/components/leaderboard";
+import { NewPlayerAction } from "@/components/new-player-action";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -39,6 +40,7 @@ export default async function Results() {
           <Button asChild variant="outline" size="sm"><Link href="/">Home</Link></Button>
           <Button asChild variant="outline" size="sm"><Link href="/inflation">Interest Rate</Link></Button>
           <Button asChild variant="outline" size="sm"><Link href="/money">Money Growth</Link></Button>
+          <NewPlayerAction label="Reset player" destination="/inflation" subtle />
         </div>
       </div>
       <div className="mb-5 grid gap-3 sm:grid-cols-2">

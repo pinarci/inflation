@@ -246,6 +246,7 @@ export function EconomicGame(props: EconomicGameProps) {
               id={`decision-${state.period}`}
               type="number"
               inputMode="decimal"
+              step="any"
               placeholder="Enter value"
               aria-label={props.decisionLabel}
               value={stateValue(state, "rate", state.period as Period)}

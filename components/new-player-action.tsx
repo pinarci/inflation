@@ -40,6 +40,7 @@ export function NewPlayerAction({
         subtle && "mx-auto"
       )}
     >
+      <p className="text-sm font-semibold">Are you sure?</p>
       <p className="text-sm leading-6 text-muted-foreground">
         This will start a new player session for all games on this browser. Previous
         leaderboard results will remain saved.
