@@ -3,13 +3,18 @@ import Link from "next/link";
 import LeaderboardClient from "@/components/leaderboard";
 import { NewPlayerAction } from "@/components/new-player-action";
 import { PageShell } from "@/components/page-shell";
+import { ResetScoresAction } from "@/components/reset-scores-action";
 import { Button } from "@/components/ui/button";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Results" };
 export const dynamic = "force-dynamic";
 
-export default async function Results() {
+export default async function Results({
+  searchParams,
+}: {
+  searchParams: { error?: string; message?: string };
+}) {
   const supabase = createServerSupabase();
   const [interestResult, moneyResult] = await Promise.all([
     supabase.from("cbgame").select("username, s1, s2, created_at"),
@@ -41,8 +46,11 @@ export default async function Results() {
           <Button asChild variant="outline" size="sm"><Link href="/inflation">Interest Rate</Link></Button>
           <Button asChild variant="outline" size="sm"><Link href="/money">Money Growth</Link></Button>
           <NewPlayerAction label="Reset player" destination="/inflation" subtle />
+          <ResetScoresAction />
         </div>
       </div>
+      {searchParams.message ? <p role="status" className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">{searchParams.message}</p> : null}
+      {searchParams.error ? <p role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">{searchParams.error}</p> : null}
       <div className="mb-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border bg-card p-4">
           <p className="font-semibold">Interest Rate</p>
