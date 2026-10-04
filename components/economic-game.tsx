@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NewPlayerAction } from "@/components/new-player-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,8 +62,10 @@ type EconomicGameProps = {
 };
 
 const PERIODS = [0, 1, 2, 3, 4] as const;
-const DOT_DECIMAL_INPUT = /^-?\d*\.?\d*$/;
+const DECIMAL_INPUT = /^-?\d*[.,]?\d*$/;
+const APPLY_FEEDBACK_DELAY_MS = 400;
 type Period = (typeof PERIODS)[number];
+type ApplyPhase = "idle" | "confirm" | "applied";
 
 function stateValue(
   state: EconomicGameState,
@@ -126,14 +128,22 @@ function DataTable({ state, tableLabel }: { state: EconomicGameState; tableLabel
 export function EconomicGame(props: EconomicGameProps) {
   const [state, setState] = useState(() => readState(props.storageKey, props.initialState));
   const [decisionInput, setDecisionInput] = useState("");
+  const [applyPhase, setApplyPhase] = useState<ApplyPhase>("idle");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const applyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDecisionPeriod =
     state.period === 1 ||
     state.period === 2 ||
     state.period === 3 ||
     state.period === 4;
   const isFinalPeriod = state.period === COMPLETED_PERIOD;
+
+  useEffect(() => {
+    return () => {
+      if (applyTimer.current) clearTimeout(applyTimer.current);
+    };
+  }, []);
 
   if (props.game === COMPLETED_GAME) {
     return (
@@ -177,6 +187,21 @@ export function EconomicGame(props: EconomicGameProps) {
     localStorage.setItem(props.storageKey, JSON.stringify(nextState));
     setState(nextState);
     setDecisionInput("");
+  };
+
+  const handleApply = () => {
+    if (applyPhase === "idle") {
+      setApplyPhase("confirm");
+      return;
+    }
+
+    if (applyPhase === "confirm") {
+      setApplyPhase("applied");
+      applyTimer.current = setTimeout(() => {
+        advance();
+        setApplyPhase("idle");
+      }, APPLY_FEEDBACK_DELAY_MS);
+    }
   };
 
   const submitResult = async () => {
@@ -256,12 +281,19 @@ export function EconomicGame(props: EconomicGameProps) {
               value={decisionInput}
               onChange={(event) => {
                 const value = event.target.value;
-                if (!DOT_DECIMAL_INPUT.test(value)) return;
+                if (!DECIMAL_INPUT.test(value)) return;
 
                 setDecisionInput(value);
+                setApplyPhase("idle");
 
-                if (value !== "" && value !== "-" && value !== "." && value !== "-.") {
-                  const decision = Number(value);
+                const normalizedValue = value.replace(",", ".");
+                if (
+                  normalizedValue !== "" &&
+                  normalizedValue !== "-" &&
+                  normalizedValue !== "." &&
+                  normalizedValue !== "-."
+                ) {
+                  const decision = Number(normalizedValue);
                   if (!Number.isFinite(decision)) return;
 
                   setState({
@@ -273,12 +305,30 @@ export function EconomicGame(props: EconomicGameProps) {
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
-                  advance();
+                  handleApply();
                 }
               }}
               autoFocus={state.period > 1}
             />
-            <Button type="button" onClick={advance}>Apply decision</Button>
+            <Button
+              type="button"
+              onClick={handleApply}
+              disabled={applyPhase === "applied"}
+              className={
+                applyPhase === "confirm"
+                  ? "bg-amber-400 text-amber-950 hover:bg-amber-500"
+                  : applyPhase === "applied"
+                    ? "bg-emerald-600 text-white disabled:opacity-100"
+                    : undefined
+              }
+              aria-live="polite"
+            >
+              {applyPhase === "confirm"
+                ? "Click again to apply"
+                : applyPhase === "applied"
+                  ? "Applied"
+                  : "Apply decision"}
+            </Button>
           </div>
         </div>
       ) : isFinalPeriod ? (
