@@ -62,6 +62,7 @@ type EconomicGameProps = {
 };
 
 const PERIODS = [0, 1, 2, 3, 4] as const;
+const DOT_DECIMAL_INPUT = /^-?\d*\.?\d*$/;
 type Period = (typeof PERIODS)[number];
 
 function stateValue(
@@ -124,6 +125,7 @@ function DataTable({ state, tableLabel }: { state: EconomicGameState; tableLabel
 
 export function EconomicGame(props: EconomicGameProps) {
   const [state, setState] = useState(() => readState(props.storageKey, props.initialState));
+  const [decisionInput, setDecisionInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const isDecisionPeriod =
@@ -174,6 +176,7 @@ export function EconomicGame(props: EconomicGameProps) {
 
     localStorage.setItem(props.storageKey, JSON.stringify(nextState));
     setState(nextState);
+    setDecisionInput("");
   };
 
   const submitResult = async () => {
@@ -239,22 +242,31 @@ export function EconomicGame(props: EconomicGameProps) {
         <div className="w-full max-w-md rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
           <p className="text-center text-sm font-medium text-muted-foreground">Your decision</p>
           <label htmlFor={`decision-${state.period}`} className="mb-3 mt-1 block text-center text-lg font-semibold">
-            {props.decisionLabel}: {stateValue(state, "rate", state.period as Period)}%
+            {decisionInput === ""
+              ? props.decisionLabel
+              : `${props.decisionLabel}: ${decisionInput}%`}
           </label>
           <div className="flex gap-3">
             <Input
               id={`decision-${state.period}`}
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="any"
               placeholder="Enter value"
               aria-label={props.decisionLabel}
-              value={stateValue(state, "rate", state.period as Period)}
+              value={decisionInput}
               onChange={(event) => {
-                if (event.target.value !== "") {
+                const value = event.target.value;
+                if (!DOT_DECIMAL_INPUT.test(value)) return;
+
+                setDecisionInput(value);
+
+                if (value !== "" && value !== "-" && value !== "." && value !== "-.") {
+                  const decision = Number(value);
+                  if (!Number.isFinite(decision)) return;
+
                   setState({
                     ...state,
-                    [`rate${state.period}` as "rate1" | "rate2" | "rate3" | "rate4"]: Number(event.target.value),
+                    [`rate${state.period}` as "rate1" | "rate2" | "rate3" | "rate4"]: decision,
                   });
                 }
               }}
