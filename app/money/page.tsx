@@ -19,13 +19,14 @@ export default async function Money({ searchParams }: { searchParams: { message?
   const username = cookies().get(PLAYER_IDENTITY_COOKIE)?.value ?? "dn";
   const supabase = createServerSupabase();
 
-  const { data: players, error } = await supabase
+  const { data: initialPlayers, error } = await supabase
     .from("mgame")
     .select("id, game")
     .eq("ip", ip)
     .eq("username", username);
 
   if (error) redirect(messageUrl("/money", "message", error.message));
+  let players = initialPlayers;
 
   async function setUsername(formData: FormData) {
     "use server";
@@ -51,9 +52,26 @@ export default async function Money({ searchParams }: { searchParams: { message?
   }
 
   if (players.length === 0 && username !== "dn") {
-    const { error: insertError } = await supabase.from("mgame").insert({ ip, username, game: 0, s1: 0, s2: 0 });
-    if (!insertError) redirect("/money");
-    if (insertError.code !== "23505") redirect(messageUrl("/money", "message", insertError.message));
+    const { data: createdPlayer, error: insertError } = await supabase
+      .from("mgame")
+      .insert({ ip, username, game: 0, s1: 0, s2: 0 })
+      .select("id, game")
+      .single();
+
+    if (!insertError) {
+      players = [createdPlayer];
+    } else if (insertError.code === "23505") {
+      const { data: existingPlayers, error: lookupError } = await supabase
+        .from("mgame")
+        .select("id, game")
+        .eq("username", username)
+        .limit(1);
+
+      if (lookupError) redirect(messageUrl("/money", "message", lookupError.message));
+      players = existingPlayers;
+    } else {
+      redirect(messageUrl("/money", "message", insertError.message));
+    }
   }
 
   if (players.length === 0) {
